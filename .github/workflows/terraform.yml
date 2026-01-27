@@ -1,0 +1,108 @@
+name: "Terraform Deployment"
+
+on:
+  push:
+    branches:
+      - azure
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy"
+        required: true
+        default: "sandbox"
+        type: choice
+        options:
+          - sandbox
+          - dev
+      action:
+        description: "Action to perform"
+        required: true
+        default: "plan"
+        type: choice
+        options:
+          - plan
+          - apply
+          # - destroy
+
+jobs:
+  terraform:
+    name: "Terraform Deployment"
+    runs-on: ubuntu-latest
+    # environment: ${{ inputs.environment }}  <-- Removed to use repo-level secrets/vars
+
+    permissions:
+      id-token: write
+      contents: read
+
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_USE_OIDC: true
+      ENVIRONMENT: ${{ github.event.inputs.environment || 'sandbox' }}
+      ACTION: ${{ github.event.inputs.action || 'plan' }}
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./iac-azure/Sandbox/Main
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Azure Login with OIDC
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Step 3: Check Azure CLI
+      - name: Check Azure CLI
+        run: |
+          az --version
+          az account show
+          echo "Azure CLI is authenticated"
+      # Step 3: Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+
+      # Step 4: Terraform Init
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ vars.BACKEND_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ vars.BACKEND_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ vars.BACKEND_CONTAINER }}" \
+            -backend-config="key=${{ vars.BACKEND_KEY }}"
+      # Step 5: Terraform Validate
+      - name: Terraform Validate
+        run: terraform validate
+
+      # Step 6: Terraform Plan
+      - name: Terraform Plan
+        if: ${{ env.ACTION == 'plan' }}
+        run: terraform plan -input=false -var="environment=$ENVIRONMENT" -out=tfplan
+
+      # Step 7: Upload Plan Artifact
+      - name: Upload Plan Artifact
+        if: ${{ env.ACTION == 'plan' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: iac-azure/Sandbox/Main/tfplan
+
+      # Step 8: Terraform Apply
+      - name: Terraform Apply
+        if: ${{ env.ACTION == 'apply' }}
+        run: terraform apply -auto-approve -var="environment=$ENVIRONMENT"
+
+      # Step 10: Terraform Destroy
+      # - name: Terraform Destroy
+      #   if: ${{ inputs.action == 'destroy' }}
+      #   run: terraform destroy -auto-approve -var="environment=$ENVIRONMENT"

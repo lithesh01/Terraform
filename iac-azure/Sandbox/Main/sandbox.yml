@@ -1,0 +1,647 @@
+# =========================================================================
+# DEPLOYMENT FLAGS
+# =========================================================================
+deploy:
+  resource_group: true
+  redis: false
+  redis_pe: false
+  bastion: false
+  vm: true
+  log_analytics: false
+  container_apps: false
+  container_apps_pe: false
+  container_registry: false
+  container_registry_pe: false
+  app_gateway: false
+  key_vault: false
+  postgresql: false
+  recovery_Service_vault: false
+  vpn_gateway: false
+  storage: false
+  front_door: false
+  application_insights: false
+  function_app_plan: false
+  function_app: false
+  function_app_pe: false
+  waf: false
+
+# =========================================================================
+# GENERAL & NETWORK
+# =========================================================================
+location: "Central India"
+rg_name: "evstg-rg-sandbox-ci-01"
+tags:
+  Environment: "Sandbox"
+  Project: "Everstage"
+
+# Virtual Network
+vnet_name: "evstg-vnet-sandbox-ci-01"
+address_space: ["10.0.0.0/16"]
+
+# --- Private Subnets ---
+subnet_name_private: "snet-private"
+subnet_address_prefixes_private: ["10.0.2.0/26"]
+
+# =========================================================================
+# VIRTUAL MACHINES
+# =========================================================================
+vm_names: ["evstg-github-runner-sandbox-ci-01"]
+vm_base_name: "evstg-vm-sandbox"
+vm_count: 1
+
+vm_common:
+  resource_group: "evstg-rg-sandbox-ci-01"
+  size: "Standard_D2s_v4"
+  admin_username: "adminuser"
+  vnet_name: "evstg-vnet-sandbox-ci-01"
+  subnet_name: "subnet-app"
+  subnet_address_prefixes: ["10.0.0.0/24"]
+  nsg_name: "evstg-github-runner-nsg"
+  nsg_resource_group: "evstg-rg-sandbox-ci-01"
+  os_publisher: "Canonical"
+  os_offer: "UbuntuServer"
+  os_sku: "18.04-LTS"
+  os_disk_size: 30
+  enable_entra_id_login: true
+  has_public_ip: false
+
+# =========================================================================
+# STORAGE ACCOUNTS
+# =========================================================================
+storage_account_names: ["evstgsandboxstg01"]
+storage_account_base_name: "evstgsandboxstg"
+storage_account_count: 1
+
+storage_containers:
+  - name: "everstagepvtassests"
+    access_type: "private"
+
+storage_file_shares:
+  - name: "everstage-files"
+    quota: 50
+
+# =========================================================================
+# DATABASES
+# =========================================================================
+
+# --- PostgreSQL ---
+pg_server_names: ["evstg-pgsql-sandbox-ci-01"]
+pg_server_base_name: "evstg-pgsql-sandbox-ci-01"
+pg_server_count: 1
+
+subnet_name_pgsql: "db-snet"
+subnet_address_prefixes_pgsql: ["10.0.1.64/26"]
+pgsql_private_dns_zone_name: "evstg-pgsql-sandbox-ci-01.private.postgres.database.azure.com"
+
+pg_version: "16"
+pg_admin_password: "SecurePassword123!"
+pg_storage_mb: 131072
+pg_storage_tier: "P10"
+pg_admin_login: "interdevuser"
+pg_sku_name: "GP_Standard_D4ds_v5"
+pg_public_network_access_enabled: false
+pg_server_parameters:
+  max_connections: "1718"
+  shared_buffers: "524288"
+  wal_level: "LOGICAL"
+  shared_preload_libraries: "pg_cron,pg_stat_statements"
+pg_firewall_rules:
+  - name: "AllowAll_2025-12-31_15-11-16"
+    start_ip: "0.0.0.0"
+    end_ip: "255.255.255.255"
+
+aad_admins:
+  "g7cr@everstagetechnologies.onmicrosoft.com": "9238dc59-9b72-4b08-aa9b-0e987af33701"
+  "rkishore@everstage.com": "7472dc57-6bba-41c6-acc6-b1b9fe488ca1"
+
+# --- Redis Cache ---
+redis_names: ["evstg-redis-sandbox-ci-01"]
+redis_base_name: "evstg-redis-sandbox"
+redis_count: 1
+
+redis_capacity: 1
+family: "P"
+redis_sku_name: "Premium"
+minimum_tls_version: "1.2"
+
+subnet_redis_private_endpoint: "redis-snet"
+subnet_address_prefixes_redis_private_endpoint: ["10.0.1.0/28"]
+redis_private_dns_zone_name: "privatelink.redis.cache.windows.net"
+
+# =========================================================================
+# CONTAINER APPS & REGISTRY
+# =========================================================================
+
+# --- Container Registry ---
+acr_names: ["evstgacrcisandbox01"]
+acr_base_name: "evstgacrcisandbox"
+acr_count: 1
+acr_sku: "Premium"
+acr_public_network_access_enabled: false
+acr_retention_policy_days: 7
+acr_private_dns_zone_name: "privatelink.azurecr.io"
+acr_resource_group: "evstg-network-rg-poc-ci-01"
+
+# --- Container Apps Environment ---
+environment_names: ["everstage-sandbox"]
+environment_base_name: "everstage-sandbox"
+environment_count: 1
+
+# Workload Profiles (Mirrored from Successful POC)
+workload_profiles:
+  - name: "everstage-sandbox"
+    workload_profile_type: "D4"
+    minimum_count: 1
+    maximum_count: 2
+  - name: "sandbox-vnet"
+    workload_profile_type: "D4"
+    minimum_count: 1
+    maximum_count: 2
+  - name: "engine"
+    workload_profile_type: "D4"
+    minimum_count: 1
+    maximum_count: 2
+
+# Subnets & DNS (Safe Ranges)
+subnet_name_container_app: "con-snet-01"
+subnet_address_prefixes_container_app: ["10.0.16.0/25"]
+subnet_container_private_endpoints: "con-pe-snet-01"
+subnet_address_prefixes_container_private_endpoints: ["10.0.16.128/28"]
+container_apps_private_dns_zone_name: "private.azurecontainerapps.io"
+ca_environment_suffix_match: "agreeableocean-45731362.centralindia.azurecontainerapps.io"
+
+
+container_apps:
+  everstage_sandbox_web:
+    name: "everstage-sandbox-web"
+    revision_mode: "Single"
+    identity_type: "SystemAssigned"
+    ingress_enabled: true
+    ingress_external_enabled: true
+    target_port: 80
+    workload_profile_name: "Consumption"
+    min_replicas: 1
+    max_replicas: 5
+    containers:
+      - name: "web"
+        image: "evstgtestacrcipoc01.azurecr.io/everstage:web_0628a4_migration-azure_1"
+        cpu: 3.5
+        memory: "7.0Gi"
+        command: ["sh", "-c", "python /code/scripts/cd/copy_static_files.py; gunicorn interstage_project.wsgi:application --bind :7123 --workers 3 --timeout 900 --worker-class gthread --threads 3"]
+        env:
+          - { name: "DEBUG", value: "0" }
+          - { name: "DB_HOST", value: "evstg-pgsql-sandbox-ci-01.private.postgres.database.azure.com" }
+          - { name: "DB_PORT", value: "5432" }
+          - { name: "DB_USER", value: "interdevuser" }
+          - { name: "DB_PASSWORD", value: "<DB_PASSWORD_PLACEHOLDER>" }
+          - { name: "DB_NAME", value: "interstage-sandbox" }
+          - { name: "DB_ENGINE", value: "postgresql" }
+          - { name: "DEPLOYMENT_URL", value: "xxxxxxx" }
+          - { name: "DEPLOYED_AT", value: "will be updated" }
+          - { name: "DEPLOYED_BRANCH", value: "main" }
+          - { name: "GITHUB_SHA_SHORT", value: "$GITHUB_SHA_SHORT" }
+          - { name: "DEPLOYED_BY", value: "will be updated1" }
+          - { name: "SLACK_CLIENT_ID", value: "199869019381.4188280916551" }
+          - { name: "MESSAGE_BROKER_URL", value: "redis://:<REDIS_KEY_PLACEHOLDER>@evstg-redis-poc-ci-01.redis.cache.windows.net:6379" }
+          - { name: "SLACK_SIGNING_SECRET", value: "<SLACK_SIGNING_SECRET_PLACEHOLDER>" }
+          - { name: "SLACK_CLIENT_SECRET", value: "<SLACK_CLIENT_SECRET_PLACEHOLDER>" }
+          - { name: "EFS_BASE_PATH", value: "/mnt/efs" }
+          - { name: "GMAIL_CLIENT_ID", value: "<GMAIL_CLIENT_ID_PLACEHOLDER>" }
+          - { name: "GMAIL_CLIENT_SECRET", value: "<GMAIL_CLIENT_SECRET_PLACEHOLDER>" }
+          - { name: "GMAIL_REDIRECT_URI", value: "https://mail.google.com" }
+          - { name: "DJANGO_ALLOWED_HOSTS", value: "*" }
+          - { name: "USE_KEY_PAIR_AUTH", value: "Yes" }
+          - { name: "AWS_SNOWFLAKE_PRIVATE_KEY_SECRET_NAME", value: "snowflake-user-pvt-key" }
+          - { name: "AWS_STORMBREAKER_PRIVATE_KEY_SECRET_NAME", value: "snowflake-user-pvt-key" }
+          - { name: "SNOWFLAKE_DATABASE", value: "AZURE_DB" }
+          - { name: "SNOWFLAKE_ACCOUNT", value: "ZBZFPIW-EVERSTAGE_AZ_DEV" }
+          - { name: "SNOWFLAKE_EXECUTION_MODE", value: "etl" }
+          - { name: "SNOWFLAKE_PASSWORD", value: "<SNOWFLAKE_PASSWORD_PLACEHOLDER>" }
+          - { name: "SNOWFLAKE_REGION", value: "centralindia" }
+          - { name: "SNOWFLAKE_ROLE", value: "ACCOUNTADMIN" }
+          - { name: "SNOWFLAKE_SCHEMA", value: "PUBLIC" }
+          - { name: "SNOWFLAKE_USER", value: "AZURE_USER" }
+          - { name: "SNOWFLAKE_WAREHOUSE", value: "AZURE_WH" }
+          - { name: "STORMBREAKER_SNOWFLAKE_ACCOUNT", value: "ZBZFPIW-EVERSTAGE_AZ_DEV" }
+          - { name: "STORMBREAKER_SNOWFLAKE_DATABASE", value: "AZURE_DB" }
+          - { name: "STORMBREAKER_SNOWFLAKE_PASSWORD", value: "<SNOWFLAKE_PASSWORD_PLACEHOLDER>" }
+          - { name: "STORMBREAKER_SNOWFLAKE_REGION", value: "centralindia" }
+          - { name: "STORMBREAKER_SNOWFLAKE_ROLE", value: "ACCOUNTADMIN" }
+          - { name: "STORMBREAKER_SNOWFLAKE_SCHEMA", value: "PUBLIC" }
+          - { name: "STORMBREAKER_SNOWFLAKE_USER", value: "AZURE_USER" }
+          - { name: "STORMBREAKER_SNOWFLAKE_WAREHOUSE", value: "AZURE_WH" }
+          - { name: "SECRET_KEY", value: "<SECRET_KEY_PLACEHOLDER>" }
+          - { name: "SEGMENT_WRITE_KEY", value: "BEmPSDC0c3EqPVETIuc1kXzp1ysrjj7a" }
+          - { name: "ENV", value: "AZURE-DEMO" }
+          - { name: "S3_PVT_ASSETS_BUCKET", value: "everstagepvtassests" }
+          - { name: "S3_REGION_NAME", value: "centralindia" }
+          - { name: "SUB_PLAN", value: "BASIC,ENTERPRISE,MANUAL,ICU,IMPL_SLOT_1,IMPL_SLOT_2,ETL_SLOT_1,ETL_SLOT_2,ETL_SLOT_3" }
+          - { name: "SUPABASE_ANON_KEY", value: "<SUPABASE_ANON_KEY_PLACEHOLDER>" }
+          - { name: "SUPABASE_JWT_SECRET", value: "<SUPABASE_JWT_SECRET_PLACEHOLDER>" }
+          - { name: "SUPABASE_REALTIME_TABLE", value: "realtime_events_qa" }
+          - { name: "SUPABASE_SERVICE_ROLE_SECRET", value: "<SUPABASE_SERVICE_ROLE_SECRET_PLACEHOLDER>" }
+          - { name: "SUPABASE_URL", value: "https://syauwwbuqwukdpynwgoc.supabase.co" }
+          - { name: "TG_NAME", value: "UPSTREAM,DATABOOK,COMMISSION,SETTLEMENT,REPORT,EMAILNOTIFICATION,MISC,SNAPSHOT,EVENT,IF,WHEN,THEN,SEARCHENGINE,MAESTRO_ROUTER,DS_VARIANT_EFS_RUN" }
+          - { name: "TYPESENSE_API_KEY", value: "<TYPESENSE_API_KEY_PLACEHOLDER>" }
+          - { name: "TYPESENSE_CONNECTION_TIMEOUT", value: "5" }
+          - { name: "TYPESENSE_HOST", value: "vxmcj2k87rhwti1qp-1.a1.typesense.net" }
+          - { name: "TYPESENSE_PORT", value: "443" }
+          - { name: "TYPESENSE_PROTOCOL", value: "https" }
+          - { name: "REACT_APP_EVERSTAGE_ASSETS_URL", value: "https://dtwvzg6t3sbh6.cloudfront.net/app-graphics" }
+          - { name: "REACT_APP_SENTRY_DSN", value: "<SENTRY_DSN_PLACEHOLDER>" }
+          - { name: "REACT_APP_SENTRY_PROJECT", value: "everstage-non-prod" }
+          - { name: "REACT_APP_SUPABASE_ANON_KEY", value: "<SUPABASE_ANON_KEY_PLACEHOLDER>" }
+          - { name: "ROW_CALCULATED_FIELDS_BATCH_SIZE", value: "75000" }
+          - { name: "S3_GONG_CALL_BUCKET", value: "everstage-cpq-ai-assets-dev-env" }
+          - { name: "PVT_KEY_REGION", value: "centralindia" }
+          - { name: "MSTEAMS_APP_EXTERNAL_ID", value: "9df4cb5a-8a06-49d4-a5fb-57d3ac0cdcbe" }
+          - { name: "MSTEAMS_CLIENT_ID", value: "a276f0c5-d0a2-40c1-9d3b-9fa56a9bb039" }
+          - { name: "MSTEAMS_CLIENT_SECRET", value: "<MSTEAMS_CLIENT_SECRET_PLACEHOLDER>" }
+          - { name: "ELASTIC_CACHE_RO_SERVER", value: "redis://:<REDIS_KEY_PLACEHOLDER>@evstg-redis-poc-ci-01.redis.cache.windows.net:6379" }
+          - { name: "AWS_REGION", value: "us-east-2" }
+          - { name: "AWS_DEFAULT_REGION", value: "us-east-2" }
+          - { name: "C_FORCE_ROOT", value: "1" }
+          - { name: "CELERY_BROKER_URL", value: "redis://:<REDIS_KEY_PLACEHOLDER>@evstg-redis-poc-ci-01.redis.cache.windows.net:6379" }
+          - { name: "CELERY_RESULT_BACKEND", value: "redis://:<REDIS_KEY_PLACEHOLDER>@evstg-redis-poc-ci-01.redis.cache.windows.net:6379" }
+          - { name: "AUTH_AUDIENCE", value: "https://everstage-icm" }
+          - { name: "AUTH_ISSUER", value: "https://everstage-azure-demo.us.auth0.com/" }
+          - { name: "AUTH_MGMT_AUDIENCE", value: "https://everstage-azure-demo.us.auth0.com/api/v2/" }
+          - { name: "AUTH_MGMT_CLIENT_ID", value: "xQZD5n2TgfrYqky14wxE9bYAmsxY562a" }
+          - { name: "AUTH_MGMT_CLIENT_SECRET", value: "<AUTH0_SECRET_PLACEHOLDER>" }
+          - { name: "AUTH_MGMT_ISSUER", value: "https://everstage-azure-demo.us.auth0.com/" }
+          - { name: "REACT_APP_ACTUAL_ENV", value: "AZURE-DEMO" }
+          - { name: "STATIC_SERVE_FOLDER", value: "STATIC_BUILD" }
+          - { name: "EVERSTAGE_SUPERSET_API_CLIENT_SECRET", value: "<SUPERSET_SECRET_PLACEHOLDER>" }
+          - { name: "S3_CDN", value: "https://d15xhjuprkgztj.cloudfront.net" }
+          - { name: "S3_BUCKET", value: "esi-int-esi-sre-everstage-app-ap-southeast-1" }
+          - { name: "SUPERSET_API_PASSWORD", value: "admin" }
+          - { name: "SUPERSET_API_USERNAME", value: "admin" }
+          - { name: "SUPERSET_HOST", value: "https://analytics-cust-sandbox.everstage.com" }
+          - { name: "REACT_APP_SUPABASE_URL", value: "https://jbvjdqpuwulljjaiwkrt.supabase.co" }
+          - { name: "KAFKA_BROKER_URL", value: "b-1.escustsandkafkacluster.ykalnl.c4.kafka.us-east-2.amazonaws.com:9098,b-2.escustsandkafkacluster.ykalnl.c4.kafka.us-east-2.amazonaws.com:9098" }
+          - { name: "CDN_PATH", value: "https://frontend-prod-hkehgnd8d5e3a7h6.a02.azurefd.net" }
+          - { name: "CDN_S3_PATH", value: "everstagepvtassests" }
+          - { name: "EVERSTAGE_ENGG_CLIENT_ID", value: "8001" }
+          - { name: "AZURE_KEY_VAULT_URL", value: "https://evstg-kv-poc-ci-01.vault.azure.net/" }
+          - { name: "ELASTIC_CACHE_SERVER", value: "redis://:<REDIS_KEY_PLACEHOLDER>@evstg-redis-poc-ci-01.redis.cache.windows.net:6379" }
+          - { name: "STATIC_SERVE_PARAMETER", value: "STATICSERVEPARAMETER" }
+          - { name: "USE_UNIFIED_CLOUDFRONT", value: "TRUE" }
+          - { name: "CONFLUENT_BOOTSTRAP_SERVERS", value: "pkc-7prvp.centralindia.azure.confluent.cloud:9092" }
+          - { name: "CONFLUENT_API_KEY", value: "KGEJTMOE6UGNW2QK" }
+          - { name: "CONFLUENT_API_SECRET", value: "<CONFLUENT_SECRET_PLACEHOLDER>" }
+          - { name: "CLOUD_PROVIDER", value: "AZURE" }
+          - { name: "test", value: "3A" }
+          - { name: "LANGCHAIN_API_KEY", value: "<LANGCHAIN_API_KEY_PLACEHOLDER>" }
+          - { name: "GROQ_API_KEY", value: "<GROQ_API_KEY_PLACEHOLDER>" }
+          - { name: "OPENAI_API_KEY", value: "<OPENAI_API_KEY_PLACEHOLDER>" }
+          - { name: "OPEN_AI_CODING_ASSISTANT_ID", value: "asst_UP4wmQHYVe7NlSsE5qeFJISE" }
+          - { name: "ANTHROPIC_API_KEY", value: "<ANTHROPIC_API_KEY_PLACEHOLDER>" }
+          - { name: "AZURE_STORAGE_ACCOUNT_NAME", value: "everstagedev" }
+          - { name: "SENDGRID_API_KEY", value: "<SENDGRID_API_KEY_PLACEHOLDER>" }
+          - { name: "SENDGRID_WORKFLOW_ATTACHMENT_TEMPLATE_ID", value: "d-c4ec4af1cb524e7296d7f5d5a486f27c" }
+          - { name: "SENDGRID_WORKFLOW_TEMPLATE_ID", value: "d-7e53a36d24454a63b9aa1eb6577112a9" }
+          - { name: "REACT_APP_FRESHDESK_SLUG", value: "1709199349448" }
+          - { name: "REACT_APP_FRESHDESK_CLIENT_ID", value: "451980303908285122" }
+          - { name: "REACT_APP_FRESHDESK_REDIRECT_URL", value: "https%3A%2F%2Feverstage-support.freshdesk.com%2Ffreshid%2Fcustomer_authorize_callback%3Fhd%3Deverstage-support.freshdesk.com" }
+          - { name: "REACT_APP_FRESHDESK_OAUTH_ID", value: "720600502865024107" }
+          - { name: "REACT_APP_ENV_LEARNUPON_VISIBLE", value: "true" }
+          - { name: "REACT_APP_BRAND_FETCH_CLIENT_ID", value: "1idce0oQGHTnX120CcV" }
+          - { name: "LEARNUPON_SECRET_KEY", value: "<LEARNUPON_SECRET_KEY_PLACEHOLDER>" }
+          - { name: "LEARNUPON_API_USERNAME", value: "<LEARNUPON_USERNAME_PLACEHOLDER>" }
+          - { name: "LEARNUPON_API_PASSWORD", value: "<LEARNUPON_PASSWORD_PLACEHOLDER>" }
+          - { name: "LEARNUPON_ADMIN_GROUP_ID", value: "1021407" }
+          - { name: "LEARNUPON_PAYEE_GROUP_ID", value: "1021406" }
+          - { name: "LEARNUPON_SERVICE_ENABLED", value: "true" }
+          - { name: "DOCUSIGN_CLIENT_SECRET", value: "<DOCUSIGN_SECRET_PLACEHOLDER>" }
+          - { name: "DOCUSIGN_ISV_CLIENT_ID", value: "eca1558a-79cf-4676-b941-c42da21db784" }
+          - { name: "DOCUMENT360_BASE64ENCODED_CLIENT_ID_SECRET", value: "<DOCUMENT360_SECRET_PLACEHOLDER>" }
+          - { name: "DOCUSIGN_ISV_CLIENT_SECRET", value: "<DOCUSIGN_SECRET_PLACEHOLDER>" }
+          - { name: "DOCUMENT360_READER_GROUP_ID_PAYEES", value: "615decf4-90f5-4da6-937a-53f2caf507a8" }
+          - { name: "DOCUMENT360_READER_GROUP_ID_ADMINS", value: "05d34357-089e-41cd-a4d5-8053d505eef0" }
+          - { name: "DOCUSIGN_CLIENT_ID", value: "33f161d6-6f7c-4fec-b478-7593294fb3ba" }
+          - { name: "URL", value: "https://perf-az.everstage.com" }
+        volume_mounts:
+          - { name: "static-files", path: "/code/static" }
+      - name: "nginx"
+        image: "evstgtestacrcipoc01.azurecr.io/everstage:nginx_c3f785_migration-azure_1"
+        cpu: 0.25
+        memory: "0.5Gi"
+        volume_mounts:
+          - { name: "static-files", path: "/code/static" }
+    volumes:
+      - { name: "static-files", storage_type: "EmptyDir" }
+
+# --- External Certificates & Keys ---
+cert_key_vault_name: "everstage-cert-vault-2"
+cert_key_vault_rg: "Everstage-terraform-stg"
+
+# =========================================================================
+# APPLICATION GATEWAY & WAF
+# =========================================================================
+subnet_address_prefixes_agw: ["10.0.5.0/24"]
+agw_names: ["evertseg-sandbox-agw-01"]
+agw_base_name: "evertseg-sandbox-agw"
+agw_count: 1
+
+agw:
+  sku:
+    name: "WAF_v2"
+    tier: "WAF_v2"
+    capacity: 2
+  enable_autoscaling: true
+  autoscale:
+    min_capacity: 2
+    max_capacity: 5
+  listeners:
+    - name: "http-listener"
+      frontend_port_name: "http-port"
+      port: 80
+      protocol: "Http"
+      host_name: "perf-az.everstage.com"
+      ssl_certificate_name: ""
+    - name: "https-listener"
+      frontend_port_name: "https-port"
+      port: 443
+      protocol: "Https"
+      host_name: "perf-az.everstage.com"
+      ssl_certificate_name: "cert"
+  ssl_certificates:
+    - name: "cert"
+      key_vault_secret_id: "https://everstage-cert-vault-2.vault.azure.net/secrets/cert"
+  backend_pools:
+    - name: "backend-pool"
+      fqdns:
+        [
+          "everstage-sandbox-web.agreeableocean-45731362.centralindia.azurecontainerapps.io",
+        ]
+      ip_addresses: []
+  backend_http_settings:
+    - name: "https-settings"
+      cookie_based_affinity: "Disabled"
+      port: 443
+      protocol: "Https"
+      request_timeout: 20
+      probe_name: "health-probe"
+      connection_draining_enabled: false
+      connection_draining_timeout: 0
+      pick_host_name_from_backend_address: false
+      host_name: "everstage-sandbox-web.agreeableocean-45731362.centralindia.azurecontainerapps.io"
+  health_probes:
+    - name: "health-probe"
+      protocol: "Https"
+      host: "everstage-sandbox-web.agreeableocean-45731362.centralindia.azurecontainerapps.io"
+      path: "/"
+      interval: 30
+      timeout: 30
+      unhealthy_threshold: 3
+      match_status_codes: ["200-399"]
+      pick_host_name_from_backend_http_settings: true
+  routing_rules:
+    - name: "http-rule"
+      rule_type: "Basic"
+      http_listener_name: "http-listener"
+      backend_address_pool_name: "backend-pool"
+      backend_http_settings_name: "https-settings"
+      priority: 100
+  redirect_configurations: []
+
+waf:
+  name: "evstg-waf-policy"
+  policy_settings:
+    mode: "Prevention"
+    request_body_check: true
+    max_request_body_size_in_kb: 128
+    file_upload_limit_in_mb: 4000
+  managed_rule_sets:
+    - type: "OWASP"
+      version: "3.2"
+    - type: "Microsoft_BotManagerRuleSet"
+      version: "1.1"
+  custom_rules:
+    - name: "AllowStaticResources"
+      priority: 1
+      rule_type: "MatchRule"
+      action: "Allow"
+      match_conditions:
+        - match_variables: [{ variable_name: "RequestUri" }]
+          operator: "Contains"
+          match_values:
+            ["/static-frontend/", "/static/", "/favicon.ico", "/manifest.json"]
+          transforms: ["Lowercase"]
+        - match_variables: [{ variable_name: "RequestMethod" }]
+          operator: "Contains"
+          match_values: ["OPTIONS"]
+          transforms: ["Lowercase"]
+        - match_variables: [{ variable_name: "QueryString" }]
+          operator: "Contains"
+          match_values: ["skipautoiframelogin"]
+    - name: "ExcludeAPIKeys"
+      priority: 2
+      rule_type: "MatchRule"
+      action: "Allow"
+      match_conditions:
+        - match_variables:
+            - { variable_name: "RequestHeaders", selector: "x-api-key" }
+            - { variable_name: "RequestHeaders", selector: "authorization" }
+            - {
+                variable_name: "RequestHeaders",
+                selector: "x-consumer-custom-id",
+              }
+            - { variable_name: "RequestHeaders", selector: "x-request-id" }
+            - { variable_name: "RequestHeaders", selector: "x-guesttoken" }
+            - {
+                variable_name: "RequestHeaders",
+                selector: "freshservice-api-key",
+              }
+            - {
+                variable_name: "RequestHeaders",
+                selector: "data-migrator-secret",
+              }
+            - {
+                variable_name: "RequestHeaders",
+                selector: "x-etl-infra-auth-token",
+              }
+            - {
+                variable_name: "RequestHeaders",
+                selector: "x-fivetran-signature-256",
+              }
+            - {
+                variable_name: "RequestHeaders",
+                selector: "x-everstage-spark-auth",
+              }
+            - { variable_name: "RequestHeaders", selector: "estimator-secret" }
+            - { variable_name: "RequestHeaders", selector: "x-slack-signature" }
+          operator: "Contains"
+          match_values: ['" "', '""']
+    - name: "AllowAdminUpdateCustomer"
+      priority: 3
+      rule_type: "MatchRule"
+      action: "Allow"
+      match_conditions:
+        - match_variables: [{ variable_name: "RequestUri" }]
+          operator: "Contains"
+          match_values: ["/everstage_admin/update_customer"]
+    - name: "AllowSlackAndAnalytics"
+      priority: 4
+      rule_type: "MatchRule"
+      action: "Block"
+      match_conditions:
+        - match_variables:
+            [{ variable_name: "RequestHeaders", selector: "host" }]
+          operator: "Contains"
+          match_values:
+            [
+              "analytics.*\\.everstage\\.com",
+              ".*/slack/(install|oauth_redirect|events).*",
+            ]
+    - name: "AzureIPRateLimit"
+      priority: 5
+      rule_type: "RateLimitRule"
+      action: "Block"
+      rate_limit_duration: "OneMin"
+      rate_limit_threshold: 10000
+      rate_limit_threshold: 10000
+      group_rate_limit_by: "ClientAddr"
+      match_conditions:
+        - match_variables:
+            - { variable_name: "RequestHeaders", selector: "x-api-key" }
+            - { variable_name: "RequestHeaders", selector: "authorization" }
+            - {
+                variable_name: "RequestHeaders",
+                selector: "x-consumer-custom-id",
+              }
+            - { variable_name: "RequestHeaders", selector: "x-request-id" }
+            - { variable_name: "RequestHeaders", selector: "x-guesttoken" }
+            - {
+                variable_name: "RequestHeaders",
+                selector: "freshservice-api-key",
+              }
+            - {
+                variable_name: "RequestHeaders",
+                selector: "data-migrator-secret",
+              }
+            - {
+                variable_name: "RequestHeaders",
+                selector: "x-etl-infra-auth-token",
+              }
+            - {
+                variable_name: "RequestHeaders",
+                selector: "x-fivetran-signature-256",
+              }
+            - {
+                variable_name: "RequestHeaders",
+                selector: "x-everstage-spark-auth",
+              }
+            - { variable_name: "RequestHeaders", selector: "estimator-secret" }
+            - { variable_name: "RequestHeaders", selector: "x-slack-signature" }
+          operator: "Contains"
+          match_values: ['" "', '""']
+    - name: "BlockIframeRequests"
+      priority: 6
+      rule_type: "MatchRule"
+      action: "Block"
+      match_conditions:
+        - match_variables:
+            [{ variable_name: "RequestHeaders", selector: "sec-fetch-dest" }]
+          operator: "Contains"
+          match_values: ["iframe"]
+    - name: "BlockBadBots"
+      priority: 7
+      rule_type: "MatchRule"
+      action: "Block"
+      match_conditions:
+        - match_variables:
+            [{ variable_name: "RequestHeaders", selector: "User-Agent" }]
+          operator: "Contains"
+          match_values:
+            ["bot", "crawler", "spider", "scraper", "curl", "wget", "nmap"]
+    - name: "BlockHighRiskCountries"
+      priority: 20
+      rule_type: "MatchRule"
+      action: "Block"
+      match_conditions:
+        - match_variables: [{ variable_name: "RemoteAddr" }]
+          operator: "GeoMatch"
+          match_values: ["CU", "SY", "KP", "IR"]
+
+# =========================================================================
+# MONITORING
+# =========================================================================
+log_analytics_names: ["evstg-log-sandbox-ci-01"]
+log_analytics_base_name: "evstg-log-sandbox"
+log_analytics_count: 1
+
+application_insights_names: ["evstg-app-insights-sandbox-ci-01"]
+application_insights_base_name: "evstg-app-insights-sandbox"
+application_insights_count: 1
+application_insights_type: "web"
+
+# =========================================================================
+# SECURITY
+# =========================================================================
+key_vault_names: ["evstg-kv-sandbox-ci-01"]
+key_vault_base_name: "evstg-kv-sandbox"
+key_vault_count: 1
+
+recovery_vault_names: ["evstg-recovery-sandbox-ci-01"]
+recovery_vault_base_name: "evstg-recovery-sandbox"
+recovery_vault_count: 1
+recovery_vault_resource_group: "evstg-rg-sandbox-ci-01"
+recovery_vault_storage_mode_type: "LocallyRedundant"
+recovery_vault_sku: "Standard"
+recovery_vault_soft_delete_enabled: true
+recovery_vault_public_network_access_enabled: true
+
+# =========================================================================
+# BASTION (Disabled)
+# =========================================================================
+bastion_names: []
+bastion_base_name: "evstg-bastion-sandbox"
+bastion_count: 0
+subnet_bastion: "AzureBastionSubnet"
+subnet_bastion_address_prefixes: ["10.0.3.0/26"]
+bastion_sku: "Standard"
+bastion_scale_units: 2
+bastion_copy_paste_enabled: true
+bastion_file_copy_enabled: true
+bastion_ip_connect_enabled: true
+bastion_shareable_link_enabled: false
+bastion_tunneling_enabled: true
+
+# =========================================================================
+# VPN GATEWAY (Disabled)
+# =========================================================================
+vpn_gateway_names: []
+vpn_gateway_base_name: "evstg-vpn-sandbox"
+vpn_gateway_count: 0
+
+# =========================================================================
+# FUNCTION APPS (Disabled)
+# =========================================================================
+function_app_names: []
+function_app_base_name: "evstg-func-sandbox"
+function_app_count: 0
+function_app_plan_names: []
+function_app_plan_base_name: "evstg-func-plan-sandbox"
+function_app_plan_count: 0
+function_app_outbound_subnet_name: "func-outbound-snet"
+function_app_outbound_subnet_address_prefix: "10.0.4.0/26"
+function_subnet_name: "func-snet"
+function_app_subnet_address_prefix: ["10.0.4.64/26"]
+function_app_os_type: "Linux"
+function_app_sku_name: "FC1"
+function_app_python_version: "3.11"
+function_app_public_network_access_enabled: false
+private_endpoint_network_policies: "Enabled"
+
+# =========================================================================
+# FRONT DOOR (Disabled)
+# =========================================================================
+front_door_names: []
+front_door_base_name: "evstg-fd-sandbox"
+front_door_count: 0
+
+# =========================================================================
+# DNS
+# =========================================================================
+central_dns_zone_name: "privatelink.centralindia.azurecontainerapps.io"
