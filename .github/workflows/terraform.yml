@@ -3,7 +3,7 @@ name: "Terraform Deployment"
 on:
   push:
     branches:
-      - azure
+      - main
   workflow_dispatch:
     inputs:
       environment:
@@ -86,12 +86,12 @@ jobs:
 
       # Step 6: Terraform Plan
       - name: Terraform Plan
-        if: ${{ env.ACTION == 'plan' }}
+        if: ${{ env.ACTION == 'plan' || env.ACTION == 'apply' }}
         run: terraform plan -input=false -var="environment=$ENVIRONMENT" -out=tfplan
 
       # Step 7: Upload Plan Artifact
       - name: Upload Plan Artifact
-        if: ${{ env.ACTION == 'plan' }}
+        if: ${{ env.ACTION == 'plan' || env.ACTION == 'apply' }}
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan
