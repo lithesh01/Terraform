@@ -10,10 +10,10 @@ deploy:
   log_analytics: false
   container_apps: false
   container_apps_pe: false
-  container_registry: false
-  container_registry_pe: false
+  container_registry: true
+  container_registry_pe: true
   app_gateway: false
-  key_vault: false
+  key_vault: true
   postgresql: false
   recovery_Service_vault: false
   vpn_gateway: false
