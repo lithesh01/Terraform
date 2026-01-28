@@ -3,26 +3,26 @@
 # =========================================================================
 deploy:
   resource_group: true
-  redis: false
-  redis_pe: false
-  bastion: false
-  vm: false
-  log_analytics: false
+  redis: true
+  redis_pe: true
+  bastion: true
+  vm: true
+  log_analytics: true
   container_apps: false
   container_apps_pe: false
-  container_registry: false
-  container_registry_pe: false
+  container_registry: true
+  container_registry_pe: true
   app_gateway: true
-  key_vault: false
-  postgresql: false
-  recovery_Service_vault: false
+  key_vault: true
+  postgresql: true
+  recovery_Service_vault: true
   vpn_gateway: false
-  storage: false
-  front_door: false
-  application_insights: false
-  function_app_plan: false
-  function_app: false
-  function_app_pe: false
+  storage: true
+  front_door: true
+  application_insights: true
+  function_app_plan: true
+  function_app: true
+  function_app_pe: true
   waf: false
 
 # =========================================================================
