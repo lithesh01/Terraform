@@ -56,7 +56,7 @@ vm_count: 1
 
 vm_common:
   resource_group: "evstg-rg-sandbox-ci-01"
-  size: "Standard_D4as_v4"
+  size: "Standard_B2s"
   admin_username: "adminuser"
   vnet_name: "evstg-vnet-sandbox-ci-01"
   subnet_name: "subnet-app"
