@@ -12,7 +12,7 @@ resource "azurerm_container_registry" "acr" {
     type = "SystemAssigned"
   }
 
-  lifecycle {
-    prevent_destroy = true
-  }
+  # lifecycle {
+  #   prevent_destroy = true
+  # }
 }

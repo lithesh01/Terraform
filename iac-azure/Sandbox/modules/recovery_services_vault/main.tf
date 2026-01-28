@@ -9,7 +9,7 @@ resource "azurerm_recovery_services_vault" "recovery_services_vault" {
   # cross_region_restore_enabled  = var.cross_region_restore_enabled  #Only can be true, when storage_mode_type is GeoRedundant. Defaults to false.
   # tags                          = var.tags
 
-  lifecycle {
-    prevent_destroy = true
-  }
+  # lifecycle {
+  #   prevent_destroy = true
+  # }
 }

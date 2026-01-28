@@ -22,7 +22,7 @@ resource "azurerm_postgresql_flexible_server" "main" {
 
   lifecycle {
     ignore_changes  = [zone, authentication[0].tenant_id]
-    prevent_destroy = true
+    # prevent_destroy = true
   }
 }
 
