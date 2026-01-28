@@ -143,6 +143,6 @@ resource "azurerm_application_gateway" "main" {
   tags = var.tags
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 }

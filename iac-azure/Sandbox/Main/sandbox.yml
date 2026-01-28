@@ -345,8 +345,8 @@ cert_key_vault_rg: "cert-vault-rg"
 # APPLICATION GATEWAY & WAF
 # =========================================================================
 subnet_address_prefixes_agw: ["10.0.5.0/24"]
-agw_names: ["evertseg-sandbox-agw-01"]
-agw_base_name: "evertseg-sandbox-agw"
+agw_names: ["evertstage-sandbox-agw-01"]
+agw_base_name: "evertstage-sandbox-agw"
 agw_count: 1
 
 agw:
