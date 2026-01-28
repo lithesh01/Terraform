@@ -43,7 +43,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
   }
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 }
 
