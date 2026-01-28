@@ -50,9 +50,9 @@ subnet_address_prefixes_private: ["10.0.2.0/26"]
 # =========================================================================
 # VIRTUAL MACHINES
 # =========================================================================
-vm_names: ["everstage-spm-github-runner", "everstage-sandbox-superset-runner"]
+vm_names: ["evstg-github-runner-sandbox-ci-01"]
 vm_base_name: "evstg-vm-sandbox"
-vm_count: 2
+vm_count: 1
 
 vm_common:
   resource_group: "evstg-rg-sandbox-ci-01"
@@ -92,7 +92,7 @@ storage_file_shares:
 # =========================================================================
 
 # --- PostgreSQL ---
-pg_server_names: ["evstg-psql-sandbox-ci-01"]
+pg_server_names: ["evstg-pgsql-sandbox-ci-01"]
 pg_server_base_name: "evstg-psql-sandbox-ci-01"
 pg_server_count: 1
 
@@ -142,8 +142,8 @@ redis_private_dns_zone_name: "privatelink.redis.cache.windows.net"
 # =========================================================================
 
 # --- Container Registry ---
-acr_names: ["evstgacrsandboxci01"]
-acr_base_name: "evstgacrsandboxci"
+acr_names: ["evstgacrcisandbox01"]
+acr_base_name: "evstgacrcisandbox"
 acr_count: 1
 acr_sku: "Premium"
 acr_public_network_access_enabled: false

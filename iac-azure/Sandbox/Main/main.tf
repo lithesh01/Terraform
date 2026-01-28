@@ -540,20 +540,20 @@ module "application_gateway" {
       ip_addresses = pool.ip_addresses
       fqdns        = [
         for fqdn in pool.fqdns : 
-          replace(fqdn, local.config.ca_environment_suffix_match, module.container_app[0].environment_default_domain)
+          replace(fqdn, local.config.ca_environment_suffix_match, local.deploy_container_apps ? module.container_app[0].environment_default_domain : "example.com")
       ]
     }
   ]
 
   backend_http_settings = [
     for setting in local.config.agw.backend_http_settings : merge(setting, {
-      host_name = setting.host_name != "" ? replace(setting.host_name, local.config.ca_environment_suffix_match, module.container_app[0].environment_default_domain) : setting.host_name
+      host_name = setting.host_name != "" ? replace(setting.host_name, local.config.ca_environment_suffix_match, local.deploy_container_apps ? module.container_app[0].environment_default_domain : "example.com") : setting.host_name
     })
   ]
 
   health_probes = [
     for probe in local.config.agw.health_probes : merge(probe, {
-      host = probe.host != "" ? replace(probe.host, local.config.ca_environment_suffix_match, module.container_app[0].environment_default_domain) : probe.host
+      host = probe.host != "" ? replace(probe.host, local.config.ca_environment_suffix_match, local.deploy_container_apps ? module.container_app[0].environment_default_domain : "example.com") : probe.host
     })
   ]
   routing_rules           = local.config.agw.routing_rules
