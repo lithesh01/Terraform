@@ -270,6 +270,13 @@ module "linux_vm" {
   tags = local.config.tags
 }
 
+resource "azurerm_role_assignment" "vm_admin_login" {
+  count                = (local.deploy_VM && local.config.vm_common.enable_entra_id_login && lookup(local.config.vm_common, "vm_admin_group_id", "") != "") ? length(local.vm_names) : 0
+  scope                = module.linux_vm[count.index].vm_id
+  role_definition_name = "Virtual Machine Administrator Login"
+  principal_id         = local.config.vm_common.vm_admin_group_id
+}
+
 # --- Bastion Host ---
 module "bastion_host" {
   count                  = local.deploy_bastion ? length(local.bastion_names) : 0
@@ -469,34 +476,43 @@ module "waf" {
   tags                = local.config.tags
 }
 
+# Conditionally create identity or use existing
+locals {
+  use_existing_identity = lookup(local.config, "existing_agw_identity_id", "") != ""
+  agw_identity_id       = local.use_existing_identity ? local.config.existing_agw_identity_id : (local.deploy_app_gateway ? azurerm_user_assigned_identity.agw_identity[0].id : null)
+  agw_principal_id      = local.use_existing_identity ? local.config.existing_agw_identity_principal_id : (local.deploy_app_gateway ? azurerm_user_assigned_identity.agw_identity[0].principal_id : null)
+}
+
 resource "azurerm_user_assigned_identity" "agw_identity" {
-  count               = local.deploy_app_gateway ? length(local.agw_names) : 0
+  count               = (local.deploy_app_gateway && !local.use_existing_identity) ? length(local.agw_names) : 0
   name                = "${local.agw_names[count.index]}-identity"
   resource_group_name = module.resource_group.rg_name
   location            = module.resource_group.rg_location
   tags                = local.config.tags
 }
 
-# Role Assignment: AGW Identity -> Key Vault (Secrets User for SSL)
+# Role Assignment: AGW Identity -> Local Key Vault
 resource "azurerm_role_assignment" "agw_kv_secrets" {
   count                = local.deploy_app_gateway && local.deploy_key_vault ? length(local.agw_names) : 0
   scope                = module.key_vault[0].key_vault_id
   role_definition_name = "Key Vault Administrator"
-  principal_id         = azurerm_user_assigned_identity.agw_identity[count.index].principal_id
+  principal_id         = local.agw_principal_id
 }
 
-# External Key Vault Data Source (for SSL certificates managed outside this project)
+# External Key Vault Data Source
 data "azurerm_key_vault" "external_vault" {
+  provider            = azurerm.external
   name                = local.config.cert_key_vault_name
   resource_group_name = local.config.cert_key_vault_rg
 }
 
 # Role Assignment for External Key Vault
 resource "azurerm_role_assignment" "agw_external_kv_secrets" {
+  provider             = azurerm.external
   count                = local.deploy_app_gateway ? length(local.agw_names) : 0
   scope                = data.azurerm_key_vault.external_vault.id
-  role_definition_name = "Key Vault Secrets User"
-  principal_id         = azurerm_user_assigned_identity.agw_identity[count.index].principal_id
+  role_definition_name = "Key Vault Administrator"
+  principal_id         = local.agw_principal_id
 }
 
 module "application_gateway" {
@@ -508,7 +524,7 @@ module "application_gateway" {
   subnet_id           = module.subnet_name_agw.id
   public_ip_id        = module.public_ip_agw[count.index].public_ip_id
   waf_policy_id       = local.deploy_waf ? module.waf[count.index].waf_policy_id : null
-  managed_identity_id = azurerm_user_assigned_identity.agw_identity[count.index].id
+  managed_identity_id = local.agw_identity_id
 
   sku = local.config.agw.sku
 

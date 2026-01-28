@@ -3,26 +3,26 @@
 # =========================================================================
 deploy:
   resource_group: true
-  redis: true
-  redis_pe: true
-  bastion: true
-  vm: true
-  log_analytics: true
+  redis: false
+  redis_pe: false
+  bastion: false
+  vm: false
+  log_analytics: false
   container_apps: false
   container_apps_pe: false
-  container_registry: true
-  container_registry_pe: true
-  app_gateway: false
+  container_registry: false
+  container_registry_pe: false
+  app_gateway: true
   key_vault: false
-  postgresql: true
-  recovery_Service_vault: true
+  postgresql: false
+  recovery_Service_vault: false
   vpn_gateway: false
-  storage: true
-  front_door: true
-  application_insights: true
-  function_app_plan: true
-  function_app: true
-  function_app_pe: true
+  storage: false
+  front_door: false
+  application_insights: false
+  function_app_plan: false
+  function_app: false
+  function_app_pe: false
   waf: false
 
 # =========================================================================
@@ -30,6 +30,11 @@ deploy:
 # =========================================================================
 location: "Central India"
 rg_name: "evstg-rg-sandbox-ci-01"
+
+# Required for Plan evaluation even if deploy = false
+central_dns_zone_name: "privatelink.azurewebsites.net"
+private_endpoint_network_policies: "Enabled"
+
 tags:
   Environment: "Sandbox"
   Project: "Everstage"
@@ -45,13 +50,13 @@ subnet_address_prefixes_private: ["10.0.2.0/26"]
 # =========================================================================
 # VIRTUAL MACHINES
 # =========================================================================
-vm_names: ["evstg-github-runner-sandbox-ci-01"]
+vm_names: ["everstage-spm-github-runner", "everstage-sandbox-superset-runner"]
 vm_base_name: "evstg-vm-sandbox"
-vm_count: 1
+vm_count: 2
 
 vm_common:
   resource_group: "evstg-rg-sandbox-ci-01"
-  size: "Standard_D2s_v4"
+  size: "Standard_D4as_v4"
   admin_username: "adminuser"
   vnet_name: "evstg-vnet-sandbox-ci-01"
   subnet_name: "subnet-app"
@@ -59,17 +64,19 @@ vm_common:
   nsg_name: "evstg-github-runner-nsg"
   nsg_resource_group: "evstg-rg-sandbox-ci-01"
   os_publisher: "Canonical"
-  os_offer: "UbuntuServer"
-  os_sku: "18.04-LTS"
+  os_offer: "0001-com-ubuntu-server-jammy"
+  os_sku: "22_04-lts-gen2"
   os_disk_size: 30
   enable_entra_id_login: true
+  vm_admin_group_id: "050f4a66-43f6-4f0b-a6d7-de650eb2345f"
   has_public_ip: false
+
 
 # =========================================================================
 # STORAGE ACCOUNTS
 # =========================================================================
-storage_account_names: ["evstgsandboxstg01"]
-storage_account_base_name: "evstgsandboxstg"
+storage_account_names: ["evstgstgsandboxci01"]
+storage_account_base_name: "evstgstgsandboxci"
 storage_account_count: 1
 
 storage_containers:
@@ -85,8 +92,8 @@ storage_file_shares:
 # =========================================================================
 
 # --- PostgreSQL ---
-pg_server_names: ["evstg-pgsql-sandbox-ci-01"]
-pg_server_base_name: "evstg-pgsql-sandbox-ci-01"
+pg_server_names: ["evstg-psql-sandbox-ci-01"]
+pg_server_base_name: "evstg-psql-sandbox-ci-01"
 pg_server_count: 1
 
 subnet_name_pgsql: "db-snet"
@@ -113,10 +120,12 @@ pg_firewall_rules:
 aad_admins:
   "g7cr@everstagetechnologies.onmicrosoft.com": "9238dc59-9b72-4b08-aa9b-0e987af33701"
   "rkishore@everstage.com": "7472dc57-6bba-41c6-acc6-b1b9fe488ca1"
+  "jaiganesh@everstage.com": "54093100-331e-4fb8-8145-a8119a9a4469"
+  "surya.ramesh@everstage.com": "e8110bdd-4bdf-4571-8624-91a84f5225c6"
 
 # --- Redis Cache ---
-redis_names: ["evstg-redis-sandbox-ci-01"]
-redis_base_name: "evstg-redis-sandbox"
+redis_names: ["everstage-redis-sandbox-ci-01"]
+redis_base_name: "everstage-redis-sandbox-ci"
 redis_count: 1
 
 redis_capacity: 1
@@ -133,8 +142,8 @@ redis_private_dns_zone_name: "privatelink.redis.cache.windows.net"
 # =========================================================================
 
 # --- Container Registry ---
-acr_names: ["evstgacrcisandbox01"]
-acr_base_name: "evstgacrcisandbox"
+acr_names: ["evstgacrsandboxci01"]
+acr_base_name: "evstgacrsandboxci"
 acr_count: 1
 acr_sku: "Premium"
 acr_public_network_access_enabled: false
@@ -184,16 +193,16 @@ container_apps:
     max_replicas: 5
     containers:
       - name: "web"
-        image: "evstgtestacrcipoc01.azurecr.io/everstage:web_0628a4_migration-azure_1"
+        image: "evstgacrsandboxci01.azurecr.io/everstage:web_d215fd_migration-azure_1"
         cpu: 3.5
         memory: "7.0Gi"
         command: ["sh", "-c", "python /code/scripts/cd/copy_static_files.py; gunicorn interstage_project.wsgi:application --bind :7123 --workers 3 --timeout 900 --worker-class gthread --threads 3"]
         env:
           - { name: "DEBUG", value: "0" }
-          - { name: "DB_HOST", value: "evstg-pgsql-sandbox-ci-01.private.postgres.database.azure.com" }
+          - { name: "DB_HOST", value: "evstg-psql-sandbox-ci-01.private.postgres.database.azure.com" }
           - { name: "DB_PORT", value: "5432" }
           - { name: "DB_USER", value: "interdevuser" }
-          - { name: "DB_PASSWORD", value: "<DB_PASSWORD_PLACEHOLDER>" }
+          - { name: "DB_PASSWORD", value: "SecurePassword123!" }
           - { name: "DB_NAME", value: "interstage-sandbox" }
           - { name: "DB_ENGINE", value: "postgresql" }
           - { name: "DEPLOYMENT_URL", value: "xxxxxxx" }
@@ -202,7 +211,7 @@ container_apps:
           - { name: "GITHUB_SHA_SHORT", value: "$GITHUB_SHA_SHORT" }
           - { name: "DEPLOYED_BY", value: "will be updated1" }
           - { name: "SLACK_CLIENT_ID", value: "199869019381.4188280916551" }
-          - { name: "MESSAGE_BROKER_URL", value: "redis://:<REDIS_KEY_PLACEHOLDER>@evstg-redis-poc-ci-01.redis.cache.windows.net:6379" }
+          - { name: "MESSAGE_BROKER_URL", value: "redis://:68s7KFo8K7sTnEw9igv8RnLeB4UnWd85GAzCaOpMa8Q=@everstage-redis-sandbox-ci-01.redis.cache.windows.net:6379" }
           - { name: "SLACK_SIGNING_SECRET", value: "<SLACK_SIGNING_SECRET_PLACEHOLDER>" }
           - { name: "SLACK_CLIENT_SECRET", value: "<SLACK_CLIENT_SECRET_PLACEHOLDER>" }
           - { name: "EFS_BASE_PATH", value: "/mnt/efs" }
@@ -257,12 +266,12 @@ container_apps:
           - { name: "MSTEAMS_APP_EXTERNAL_ID", value: "9df4cb5a-8a06-49d4-a5fb-57d3ac0cdcbe" }
           - { name: "MSTEAMS_CLIENT_ID", value: "a276f0c5-d0a2-40c1-9d3b-9fa56a9bb039" }
           - { name: "MSTEAMS_CLIENT_SECRET", value: "<MSTEAMS_CLIENT_SECRET_PLACEHOLDER>" }
-          - { name: "ELASTIC_CACHE_RO_SERVER", value: "redis://:<REDIS_KEY_PLACEHOLDER>@evstg-redis-poc-ci-01.redis.cache.windows.net:6379" }
+          - { name: "ELASTIC_CACHE_RO_SERVER", value: "redis://:68s7KFo8K7sTnEw9igv8RnLeB4UnWd85GAzCaOpMa8Q=@everstage-redis-sandbox-ci-01.redis.cache.windows.net:6379" }
           - { name: "AWS_REGION", value: "us-east-2" }
           - { name: "AWS_DEFAULT_REGION", value: "us-east-2" }
           - { name: "C_FORCE_ROOT", value: "1" }
-          - { name: "CELERY_BROKER_URL", value: "redis://:<REDIS_KEY_PLACEHOLDER>@evstg-redis-poc-ci-01.redis.cache.windows.net:6379" }
-          - { name: "CELERY_RESULT_BACKEND", value: "redis://:<REDIS_KEY_PLACEHOLDER>@evstg-redis-poc-ci-01.redis.cache.windows.net:6379" }
+          - { name: "CELERY_BROKER_URL", value: "redis://:68s7KFo8K7sTnEw9igv8RnLeB4UnWd85GAzCaOpMa8Q=@everstage-redis-sandbox-ci-01.redis.cache.windows.net:6379" }
+          - { name: "CELERY_RESULT_BACKEND", value: "redis://:68s7KFo8K7sTnEw9igv8RnLeB4UnWd85GAzCaOpMa8Q=@everstage-redis-sandbox-ci-01.redis.cache.windows.net:6379" }
           - { name: "AUTH_AUDIENCE", value: "https://everstage-icm" }
           - { name: "AUTH_ISSUER", value: "https://everstage-azure-demo.us.auth0.com/" }
           - { name: "AUTH_MGMT_AUDIENCE", value: "https://everstage-azure-demo.us.auth0.com/api/v2/" }
@@ -283,7 +292,7 @@ container_apps:
           - { name: "CDN_S3_PATH", value: "everstagepvtassests" }
           - { name: "EVERSTAGE_ENGG_CLIENT_ID", value: "8001" }
           - { name: "AZURE_KEY_VAULT_URL", value: "https://evstg-kv-poc-ci-01.vault.azure.net/" }
-          - { name: "ELASTIC_CACHE_SERVER", value: "redis://:<REDIS_KEY_PLACEHOLDER>@evstg-redis-poc-ci-01.redis.cache.windows.net:6379" }
+          - { name: "ELASTIC_CACHE_SERVER", value: "redis://:68s7KFo8K7sTnEw9igv8RnLeB4UnWd85GAzCaOpMa8Q=@everstage-redis-sandbox-ci-01.redis.cache.windows.net:6379" }
           - { name: "STATIC_SERVE_PARAMETER", value: "STATICSERVEPARAMETER" }
           - { name: "USE_UNIFIED_CLOUDFRONT", value: "TRUE" }
           - { name: "CONFLUENT_BOOTSTRAP_SERVERS", value: "pkc-7prvp.centralindia.azure.confluent.cloud:9092" }
@@ -323,7 +332,7 @@ container_apps:
         volume_mounts:
           - { name: "static-files", path: "/code/static" }
       - name: "nginx"
-        image: "evstgtestacrcipoc01.azurecr.io/everstage:nginx_c3f785_migration-azure_1"
+        image: "evstgacrsandboxci01.azurecr.io/everstage:nginx_d215fd_migration-azure_1"
         cpu: 0.25
         memory: "0.5Gi"
         volume_mounts:
@@ -332,8 +341,8 @@ container_apps:
       - { name: "static-files", storage_type: "EmptyDir" }
 
 # --- External Certificates & Keys ---
-cert_key_vault_name: "everstage-cert-vault-2"
-cert_key_vault_rg: "Everstage-terraform-stg"
+cert_key_vault_name: "cert-vault-key-01"
+cert_key_vault_rg: "cert-vault-rg"
 
 # =========================================================================
 # APPLICATION GATEWAY & WAF
@@ -364,10 +373,10 @@ agw:
       port: 443
       protocol: "Https"
       host_name: "perf-az.everstage.com"
-      ssl_certificate_name: "cert"
+      ssl_certificate_name: "evstg-cert"
   ssl_certificates:
-    - name: "cert"
-      key_vault_secret_id: "https://everstage-cert-vault-2.vault.azure.net/secrets/cert"
+    - name: "evstg-cert"
+      key_vault_secret_id: "https://cert-vault-key-01.vault.azure.net/secrets/evstg-cert"
   backend_pools:
     - name: "backend-pool"
       fqdns:
@@ -579,8 +588,8 @@ application_insights_type: "web"
 # =========================================================================
 # SECURITY
 # =========================================================================
-key_vault_names: ["evstg-kv-sandbox-ci-01"]
-key_vault_base_name: "evstg-kv-sandbox"
+key_vault_names: ["evstg-sandbox-kv-ci-01"]
+key_vault_base_name: "evstg-sandbox-kv"
 key_vault_count: 1
 
 recovery_vault_names: ["evstg-recovery-sandbox-ci-01"]
@@ -592,12 +601,13 @@ recovery_vault_sku: "Standard"
 recovery_vault_soft_delete_enabled: true
 recovery_vault_public_network_access_enabled: true
 
+
 # =========================================================================
 # BASTION (Disabled)
 # =========================================================================
-bastion_names: []
+bastion_names: ["evstg-bastion-sandbox-ci-01"]
 bastion_base_name: "evstg-bastion-sandbox"
-bastion_count: 0
+bastion_count: 1
 subnet_bastion: "AzureBastionSubnet"
 subnet_bastion_address_prefixes: ["10.0.3.0/26"]
 bastion_sku: "Standard"

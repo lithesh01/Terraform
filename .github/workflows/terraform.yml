@@ -41,6 +41,7 @@ jobs:
       ARM_USE_OIDC: true
       ENVIRONMENT: ${{ github.event.inputs.environment || 'sandbox' }}
       ACTION: ${{ github.event.inputs.action || 'plan' }}
+      TF_VAR_external_subscription_id: ${{ secrets.EXTERNAL_SUBSCRIPTION_ID }}
 
     defaults:
       run:
@@ -66,6 +67,7 @@ jobs:
           az --version
           az account show
           echo "Azure CLI is authenticated"
+
       # Step 3: Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -80,18 +82,19 @@ jobs:
             -backend-config="storage_account_name=${{ vars.BACKEND_STORAGE_ACCOUNT }}" \
             -backend-config="container_name=${{ vars.BACKEND_CONTAINER }}" \
             -backend-config="key=${{ vars.BACKEND_KEY }}"
+
       # Step 5: Terraform Validate
       - name: Terraform Validate
         run: terraform validate
 
       # Step 6: Terraform Plan
       - name: Terraform Plan
-        if: ${{ env.ACTION == 'plan' || env.ACTION == 'apply' }}
+        if: github.event_name == 'push' || env.ACTION == 'plan' || env.ACTION == 'apply'
         run: terraform plan -input=false -var="environment=$ENVIRONMENT" -out=tfplan
 
       # Step 7: Upload Plan Artifact
       - name: Upload Plan Artifact
-        if: ${{ env.ACTION == 'plan' || env.ACTION == 'apply' }}
+        if: github.event_name == 'push' || env.ACTION == 'plan' || env.ACTION == 'apply'
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan
@@ -99,7 +102,7 @@ jobs:
 
       # Step 8: Terraform Apply
       - name: Terraform Apply
-        if: ${{ env.ACTION == 'apply' }}
+        if: github.event_name == 'push' || env.ACTION == 'apply'
         run: terraform apply -auto-approve -var="environment=$ENVIRONMENT"
 
       # Step 10: Terraform Destroy

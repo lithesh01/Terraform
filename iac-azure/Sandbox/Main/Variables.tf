@@ -3,3 +3,8 @@ variable "environment" {
   type        = string
   default     = "sandbox"
 }
+
+variable "external_subscription_id" {
+  description = "Subscription ID where the external Key Vault is located"
+  type        = string
+}
