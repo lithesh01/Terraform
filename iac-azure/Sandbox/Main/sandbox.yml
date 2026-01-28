@@ -3,8 +3,8 @@
 # =========================================================================
 deploy:
   resource_group: true
-  redis: true
-  redis_pe: true
+  redis: false
+  redis_pe: false
   bastion: true
   vm: true
   log_analytics: true
@@ -13,17 +13,17 @@ deploy:
   container_registry: true
   container_registry_pe: true
   app_gateway: true
-  key_vault: true
+  key_vault: false
   postgresql: true
   recovery_Service_vault: true
   vpn_gateway: false
-  storage: true
+  storage: false
   front_door: true
   application_insights: true
   function_app_plan: true
   function_app: true
   function_app_pe: true
-  waf: false
+  waf: true
 
 # =========================================================================
 # GENERAL & NETWORK
@@ -118,10 +118,7 @@ pg_firewall_rules:
     end_ip: "255.255.255.255"
 
 aad_admins:
-  "g7cr@everstagetechnologies.onmicrosoft.com": "9238dc59-9b72-4b08-aa9b-0e987af33701"
-  "rkishore@everstage.com": "7472dc57-6bba-41c6-acc6-b1b9fe488ca1"
-  "jaiganesh@everstage.com": "54093100-331e-4fb8-8145-a8119a9a4469"
-  "surya.ramesh@everstage.com": "e8110bdd-4bdf-4571-8624-91a84f5225c6"
+  "bhairavi.r@g7cr.com": "b5b3894c-1115-4881-88bd-265c0e56f9ff"
 
 # --- Redis Cache ---
 redis_names: ["everstage-redis-sandbox-ci-01"]
